@@ -1,0 +1,250 @@
+<html>
+
+  <head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+    <meta charset="utf-8">
+    <title>Zentrum - Login</title>
+  </head>
+
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+      <div class="container-fluid">
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <li class="nav-item">
+              <a class="nav-link active" aria-current="page" href="index.html">Home</a>
+            </li>
+          </ul>
+          <ul class="navbar-nav">
+            <li class="nav-item" id="adminLogin">
+              <a class="nav-link active" aria-current="page"
+                href="https://dsg-task3-m-userpool.auth.eu-central-1.amazoncognito.com/login?client_id=282pcign44ki6i42qekf5emvo8&response_type=code&scope=email+openid&redirect_uri=https://d120rsmsrxj49p.cloudfront.net/admin.html">Admin login</a>
+            </li>
+            <li class="nav-item" id="userSite">
+              <a class="nav-link active" aria-current="page" href="user.html">User</a>
+            </li>
+            <li class="nav-item" id="logout">
+              <a class="nav-link active" aria-current="page" onclick="logout()">Logout</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <div class="card" style="width: 35%; margin: auto; margin-top: 45px">
+      <div class="card-body">
+        <form action="/" method="post" id="login">
+          <div class="row mb-3">
+            <label for="inputEmail3" class="col-sm-2 col-form-label">Email</label>
+            <div class="col-sm-10">
+              <input type="email" class="form-control" id="inputEmail3" name="mail" required />
+            </div>
+          </div>
+          <div class="row mb-3">
+            <label for="inputPassword3" class="col-sm-2 col-form-label">Password</label>
+            <div class="col-sm-10">
+              <input type="password" class="form-control" id="inputPassword3" name="pw" required />
+              <input type="checkbox" onclick="showPw()">Show Password
+            </div>
+          </div>
+          <input class="btn btn-primary" type="button" value="Login" onclick="login()">
+          <a href="reg.html" class="btn btn-primary">Registrieren</a>
+        </form>
+      </div>
+    </div>
+  </body>
+
+</html>
+
+<script>
+  if (getCookie("auth")) {
+    document.getElementById("userSite").style.visibility = "show";
+    document.getElementById("adminLogin").style.display = "none";
+    document.getElementById("logout").style.visibility = "show";
+  } else {
+    document.getElementById("userSite").style.display = "none";
+    document.getElementById("adminLogin").style.visibility = "show";
+    document.getElementById("logout").style.display = "none";
+  }
+
+  function getCookie(cname) {
+    let name = cname + "=";
+    let decodedCookie = decodeURIComponent(document.cookie);
+    let ca = decodedCookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i];
+      while (c.charAt(0) == ' ') {
+        c = c.substring(1);
+      }
+      if (c.indexOf(name) == 0) {
+        return c.substring(name.length, c.length);
+      }
+    }
+    return "";
+  }
+
+  function login() {
+    var formValid = document.forms["login"].reportValidity();
+    var loginForm = document.forms["login"];
+    mail = new FormData(loginForm).get("mail");
+    pw = new FormData(loginForm).get("pw");
+    document.cookie = "auth=" + mail + '|' + SHA256(pw);
+    window.location = "user.html";
+  }
+
+  function logout() {
+    document.cookie = 'auth=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    window.location = `index.html`;
+  }
+
+  function SHA256(s) {
+    var chrsz = 8;
+    var hexcase = 0;
+
+    function safe_add(x, y) {
+      var lsw = (x & 0xFFFF) + (y & 0xFFFF);
+      var msw = (x >> 16) + (y >> 16) + (lsw >> 16);
+      return (msw << 16) | (lsw & 0xFFFF);
+    }
+
+    function S(X, n) {
+      return (X >>> n) | (X << (32 - n));
+    }
+
+    function R(X, n) {
+      return (X >>> n);
+    }
+
+    function Ch(x, y, z) {
+      return ((x & y) ^ ((~x) & z));
+    }
+
+    function Maj(x, y, z) {
+      return ((x & y) ^ (x & z) ^ (y & z));
+    }
+
+    function Sigma0256(x) {
+      return (S(x, 2) ^ S(x, 13) ^ S(x, 22));
+    }
+
+    function Sigma1256(x) {
+      return (S(x, 6) ^ S(x, 11) ^ S(x, 25));
+    }
+
+    function Gamma0256(x) {
+      return (S(x, 7) ^ S(x, 18) ^ R(x, 3));
+    }
+
+    function Gamma1256(x) {
+      return (S(x, 17) ^ S(x, 19) ^ R(x, 10));
+    }
+
+    function core_sha256(m, l) {
+      var K = new Array(0x428A2F98, 0x71374491, 0xB5C0FBCF, 0xE9B5DBA5, 0x3956C25B, 0x59F111F1, 0x923F82A4, 0xAB1C5ED5, 0xD807AA98, 0x12835B01, 0x243185BE, 0x550C7DC3, 0x72BE5D74, 0x80DEB1FE, 0x9BDC06A7, 0xC19BF174, 0xE49B69C1, 0xEFBE4786, 0xFC19DC6,
+        0x240CA1CC, 0x2DE92C6F, 0x4A7484AA, 0x5CB0A9DC, 0x76F988DA, 0x983E5152, 0xA831C66D, 0xB00327C8, 0xBF597FC7, 0xC6E00BF3, 0xD5A79147, 0x6CA6351, 0x14292967, 0x27B70A85, 0x2E1B2138, 0x4D2C6DFC, 0x53380D13, 0x650A7354, 0x766A0ABB, 0x81C2C92E,
+        0x92722C85, 0xA2BFE8A1, 0xA81A664B, 0xC24B8B70, 0xC76C51A3, 0xD192E819, 0xD6990624, 0xF40E3585, 0x106AA070, 0x19A4C116, 0x1E376C08, 0x2748774C, 0x34B0BCB5, 0x391C0CB3, 0x4ED8AA4A, 0x5B9CCA4F, 0x682E6FF3, 0x748F82EE, 0x78A5636F, 0x84C87814,
+        0x8CC70208, 0x90BEFFFA, 0xA4506CEB, 0xBEF9A3F7, 0xC67178F2);
+      var HASH = new Array(0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A, 0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19);
+      var W = new Array(64);
+      var a, b, c, d, e, f, g, h, i, j;
+      var T1, T2;
+
+      m[l >> 5] |= 0x80 << (24 - l % 32);
+      m[((l + 64 >> 9) << 4) + 15] = l;
+
+      for (var i = 0; i < m.length; i += 16) {
+        a = HASH[0];
+        b = HASH[1];
+        c = HASH[2];
+        d = HASH[3];
+        e = HASH[4];
+        f = HASH[5];
+        g = HASH[6];
+        h = HASH[7];
+
+        for (var j = 0; j < 64; j++) {
+          if (j < 16) W[j] = m[j + i];
+          else W[j] = safe_add(safe_add(safe_add(Gamma1256(W[j - 2]), W[j - 7]), Gamma0256(W[j - 15])), W[j - 16]);
+
+          T1 = safe_add(safe_add(safe_add(safe_add(h, Sigma1256(e)), Ch(e, f, g)), K[j]), W[j]);
+          T2 = safe_add(Sigma0256(a), Maj(a, b, c));
+
+          h = g;
+          g = f;
+          f = e;
+          e = safe_add(d, T1);
+          d = c;
+          c = b;
+          b = a;
+          a = safe_add(T1, T2);
+        }
+
+        HASH[0] = safe_add(a, HASH[0]);
+        HASH[1] = safe_add(b, HASH[1]);
+        HASH[2] = safe_add(c, HASH[2]);
+        HASH[3] = safe_add(d, HASH[3]);
+        HASH[4] = safe_add(e, HASH[4]);
+        HASH[5] = safe_add(f, HASH[5]);
+        HASH[6] = safe_add(g, HASH[6]);
+        HASH[7] = safe_add(h, HASH[7]);
+      }
+      return HASH;
+    }
+
+    function str2binb(str) {
+      var bin = Array();
+      var mask = (1 << chrsz) - 1;
+      for (var i = 0; i < str.length * chrsz; i += chrsz) {
+        bin[i >> 5] |= (str.charCodeAt(i / chrsz) & mask) << (24 - i % 32);
+      }
+      return bin;
+    }
+
+    function Utf8Encode(string) {
+      string = string.replace(/\r\n/g, '\n');
+      var utftext = '';
+
+      for (var n = 0; n < string.length; n++) {
+
+        var c = string.charCodeAt(n);
+
+        if (c < 128) {
+          utftext += String.fromCharCode(c);
+        } else if ((c > 127) && (c < 2048)) {
+          utftext += String.fromCharCode((c >> 6) | 192);
+          utftext += String.fromCharCode((c & 63) | 128);
+        } else {
+          utftext += String.fromCharCode((c >> 12) | 224);
+          utftext += String.fromCharCode(((c >> 6) & 63) | 128);
+          utftext += String.fromCharCode((c & 63) | 128);
+        }
+
+      }
+
+      return utftext;
+    }
+
+    function binb2hex(binarray) {
+      var hex_tab = hexcase ? '0123456789ABCDEF' : '0123456789abcdef';
+      var str = '';
+      for (var i = 0; i < binarray.length * 4; i++) {
+        str += hex_tab.charAt((binarray[i >> 2] >> ((3 - i % 4) * 8 + 4)) & 0xF) +
+          hex_tab.charAt((binarray[i >> 2] >> ((3 - i % 4) * 8)) & 0xF);
+      }
+      return str;
+    }
+
+    s = Utf8Encode(s);
+    return binb2hex(core_sha256(str2binb(s), s.length * chrsz));
+  }
+</script>
+<script type="module" src="js/app.js"></script>
+<script src="js/utl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js" integrity="sha384-IQsoLXl5PILFhosVNubq5LC7Qb9DXgDA9i+tQ8Zj3iwWAwPtgFTxbJ8NT4GN1R8p" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js" integrity="sha384-cVKIPhGWiC2Al4u+LWgxfKTRIcfu0JTxR+EQDz/bgldoEyl4H0zUF0QKbrJ0EcQF" crossorigin="anonymous"></script>

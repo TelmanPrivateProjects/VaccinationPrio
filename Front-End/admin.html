@@ -1,0 +1,404 @@
+<html>
+
+  <head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+    <meta charset="utf-8">
+    <title>Zentrum - Login</title>
+  </head>
+
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+      <div class="container-fluid">
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <li class="nav-item">
+              <a class="nav-link active" aria-current="page" href="index.html">Home</a>
+            </li>
+          </ul>
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <li class="nav-item">
+              <a class="nav-link active" aria-current="page" onclick="showUserPLZ()">User per PLZ</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link active" aria-current="page" onclick="showUserPrio()">User per Priorisierung</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link active" aria-current="page" onclick="showUserDate()">Termine Verwalten</a>
+            </li>
+          </ul>
+          <ul class="navbar-nav">
+            <li class="nav-item" id="adminLogin">
+              <a class="nav-link active" aria-current="page"
+                href="https://dsg-task3-m-userpool.auth.eu-central-1.amazoncognito.com/login?client_id=282pcign44ki6i42qekf5emvo8&response_type=code&scope=email+openid&redirect_uri=https://d120rsmsrxj49p.cloudfront.net/admin.html">Admin login</a>
+            </li>
+            <li class="nav-item" id="userSite">
+              <a class="nav-link active" aria-current="page" href="user.html">User</a>
+            </li>
+            <li class="nav-item" id="logout">
+              <a class="nav-link active" aria-current="page" onclick="logout()">Logout</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <div class="card" style="width: 70%; margin: auto; margin-top: 45px">
+      <div class="card-body">
+        <form id="plzForm">
+          <div class="row mb-3" id="userPLZ" style="display:block">
+            <label for="inputPLZ3" class="col-sm-4 col-form-label">PLZ</label>
+            <div class="col-sm-10">
+              <input type="text" class="form-control" id="inputPLZ3" name="plz" required style="width: 35%" />
+              <input class="btn btn-primary" type="button" value="Bestätigen" onclick="loadUserPLZ()" style="width:25%;margin-top:1%">
+            </div>
+          </div>
+        </form>
+
+        <form id="prioForm">
+          <div class="row mb-3" id="userPrio" style="display:none">
+            <label for="inputPrio3" class="col-sm-4 col-form-label">Priorisierung</label>
+            <div class="col-sm-10">
+
+              <select class="form-select" id="inputPrio3" name="prio" aria-label="Floating label select example" required style="width: 35%">
+                <option value=1 selected>1</option>
+                <option value=2>2</option>
+                <option value=3>3</option>
+                <option value=-1>-1</option>
+              </select>
+              <input class="btn btn-primary" type="button" value="Bestätigen" onclick="loadUserPrio()" style="width:25%;margin-top:1%">
+            </div>
+          </div>
+        </form>
+
+
+        <div class="row mb-3" id="table">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th scope="col">Priorisierungsgruppe</th>
+                <th scope="col">Vorname</th>
+                <th scope="col">Nachname</th>
+                <th scope="col">Geburtstag</th>
+                <th scope="col">PLZ</th>
+                <th scope="col">Geschlecht</th>
+                <th scope="col">Systemrelevanz</th>
+                <th scope="col">Vorerkrankungen</th>
+                <th scope="col">Email</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+            </tbody>
+          </table>
+        </div>
+
+        <div class="row mb-3" id="date" style="display:none">
+          <div style="display: grid">
+            <div style="grid-column: 1">
+              <form id="formDates">
+              </form>
+              <input type="button" class="btn btn-primary" name="addDate" value="Zeit hinzufügen" onclick="addDate()" style="width:145px">
+              <br>
+              <br>
+              <input type="button" class="btn btn-primary" name="submitDate" value="Termin hinzufügen" onclick="publishDates()" style="width:160px">
+            </div>
+            <div class="box2" style="width: 65%; grid-column: 2; float: right">
+              <div class="card boxAdmin" style=" ">
+                <div class="card-body">
+                  <h6>Termine verteilen</h6>
+                  <form id="distDatesForm">
+                    <input type="text" name="distPlz" placeholder="PLZ" style="width:145px">
+                    <input type="number" name="distN" value="Zeit hinzufügen" placeholder="Anzahl" style="width:145px">
+                    <br>
+                    <br>
+                    <input class="btn btn-primary" type="button" name="addDate" value="verteilen" onclick="distDates()" style="width:145px">
+                  </form>
+                </div>
+              </div>
+              <br>
+              <br>
+              <div class="card boxAdmin" style=" ">
+                <div class="card-body">
+                  <h6>Alte Datensätze updaten</h6>
+                  <form id="oldUserForm">
+                    <input type="text" name="oldPlz" placeholder="PLZ" style="width:145px">
+                    <input type="number" name="oldN" placeholder="Anzahl" style="width:145px">
+                    <br>
+                    <br>
+                    <input class="btn btn-primary" type="button" name="addDate" value="update" onclick="updateOldUser()" style="width:145px">
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </body>
+
+</html>
+
+<script>
+  const cognitoAuth = new URLSearchParams(window.location.search);
+  var authCode = cognitoAuth.get('code');
+  var dateCount;
+
+  var xhr = new XMLHttpRequest();
+  xhr.open("POST", "https://dsg-task3-m-userpool.auth.eu-central-1.amazoncognito.com/oauth2/token", true);
+  xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded; charset=UTF-8');
+  xhr.setRequestHeader('Authorization', getCookie("auth"));
+  xhr.onreadystatechange = function() { //Call a function when the state changes.
+    if (xhr.readyState == 4 && xhr.status == 200) {
+      obj = JSON.parse(xhr.responseText);
+      if (!getCookie("auth")) {
+        document.cookie = "auth=" + obj.id_token;
+      }
+
+    }
+  }
+  xhr.send('client_id=282pcign44ki6i42qekf5emvo8&grant_type=authorization_code&redirect_uri=https://d120rsmsrxj49p.cloudfront.net/admin.html&code=' + authCode);
+
+  if (getCookie("auth")) {
+    document.getElementById("adminLogin").style.display = "none";
+    document.getElementById("logout").style.visibility = "show";
+    document.getElementById("userSite").style.display = "none";
+  } else {
+    document.getElementById("adminLogin").style.visibility = "show";
+    document.getElementById("logout").style.display = "none";
+    document.getElementById("userSite").style.display = "none";
+  }
+
+  function getCookie(cname) {
+    let name = cname + "=";
+    let decodedCookie = decodeURIComponent(document.cookie);
+    let ca = decodedCookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i];
+      while (c.charAt(0) == ' ') {
+        c = c.substring(1);
+      }
+      if (c.indexOf(name) == 0) {
+        return c.substring(name.length, c.length);
+      }
+    }
+    return "";
+  }
+
+  function logout() {
+    document.cookie = 'auth=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    window.location = `index.html`;
+  }
+
+  function loadUserPLZ() {
+    var loginForm = document.forms["plzForm"];
+    plz = new FormData(loginForm).get("plz");
+
+    var plzUser = "";
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState == XMLHttpRequest.DONE) {
+        plzUser = JSON.parse(xhr.responseText);
+        populateTable(plzUser);
+      }
+    }
+    xhr.open("POST", "https://izho4vzq9h.execute-api.eu-central-1.amazonaws.com/dev/admin/getuserbyzipcode", true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('Authorization', getCookie("auth"));
+    xhr.send(JSON.stringify({
+      "PLZ": plz
+    }));
+  }
+
+  function loadUserPrio() {
+    var loginForm = document.forms["prioForm"];
+    prio = new FormData(loginForm).get("prio");
+
+    var prioUser = "";
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState == XMLHttpRequest.DONE) {
+        prioUser = JSON.parse(xhr.responseText);
+        populateTable(prioUser);
+      }
+    }
+    xhr.open("POST", "https://izho4vzq9h.execute-api.eu-central-1.amazonaws.com/dev/admin/getuserbyprio", true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('Authorization', getCookie("auth"));
+    xhr.send(JSON.stringify({
+      "prio": parseInt(prio, 10)
+    }));
+  }
+
+  function showUserPLZ() {
+    document.getElementById("userPLZ").style.display = "block";
+    document.getElementById("userPrio").style.display = "none";
+    document.getElementById('table').style.display = "block";
+    document.getElementById('date').style.display = "none";
+    tb = document.getElementById('tableBody');
+    tb.innerHTML = "";
+  }
+
+  function showUserPrio() {
+    document.getElementById("userPrio").style.display = "block";
+    document.getElementById("userPLZ").style.display = "none";
+    document.getElementById('table').style.display = "block";
+    document.getElementById('table').style.display = "block";
+    document.getElementById('date').style.display = "none";
+    tb = document.getElementById('tableBody');
+    tb.innerHTML = "";
+  }
+
+  function showUserDate() {
+    document.getElementById("userPrio").style.display = "none";
+    document.getElementById("userPLZ").style.display = "none";
+    document.getElementById('table').style.display = "none";
+    document.getElementById('date').style.display = "block";
+
+    var form = document.getElementById('formDates');
+    var br = document.createElement("br");
+    form.innerHTML = "";
+    var input = document.createElement("input");
+    input.type = "time";
+    input.name = "time0"
+    var datePicker = document.createElement("input");
+    datePicker.type = "date";
+    datePicker.name = "datum";
+    var plzInput = document.createElement("input");
+    plzInput.name = "plzDate";
+    plzInput.placeholder = "PLZ";
+    var brtwo = document.createElement("br");
+    form.appendChild(plzInput);
+    form.appendChild(brtwo);
+    form.appendChild(datePicker);
+    form.appendChild(br);
+    form.appendChild(input);
+    dateCount = 1;
+  }
+
+  function populateTable(data) {
+    tb = document.getElementById('tableBody');
+    tb.innerHTML = "";
+    for (var i = 0; i < data.length; i++) {
+      person = data[i];
+      let tr = document.createElement('tr');
+      tb.appendChild(tr);
+      let td1 = document.createElement('td');
+      let td2 = document.createElement('td');
+      let td3 = document.createElement('td');
+      let td4 = document.createElement('td');
+      let td5 = document.createElement('td');
+      let td6 = document.createElement('td');
+      let td8 = document.createElement('td');
+      let td9 = document.createElement('td');
+      let td10 = document.createElement('td');
+      tr.appendChild(td1);
+      tr.appendChild(td2);
+      tr.appendChild(td3);
+      tr.appendChild(td4);
+      tr.appendChild(td5);
+      tr.appendChild(td6);
+      tr.appendChild(td8);
+      tr.appendChild(td9);
+      tr.appendChild(td10);
+      td1.innerHTML += person["Priorisierungsgruppe"];
+      td2.innerHTML += person["Vorname"];
+      td3.innerHTML += person["Name"];
+      td4.innerHTML += person["Geburtstag"];
+      td5.innerHTML += person["PLZ"];
+      td6.innerHTML += person["Geschlecht"];
+      td8.innerHTML += person["Systemrelevanz"];
+      td9.innerHTML += person["Vorerkrankungen"];
+      td10.innerHTML += person["Mail"];
+    }
+  }
+
+  function addDate() {
+    var form = document.getElementById('formDates');
+    var br = document.createElement("br");
+
+    var input = document.createElement("input");
+    input.type = "time";
+    input.name = "time" + dateCount;
+    dateCount++;
+
+    form.appendChild(br);
+    form.appendChild(input);
+  }
+
+  function publishDates() {
+    var form = document.getElementById('formDates');
+    plz = new FormData(form).get("plzDate");
+    dateTemp = new FormData(form).get("datum");
+    dateSplit = dateTemp.split('-');
+    date = dateSplit[2] + "-" + dateSplit[1] + "-" + dateSplit[0];
+    var times = [];
+
+    for (var i = 0; i < dateCount; i++) {
+      times.push(new FormData(form).get("time" + i));
+    }
+
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState == XMLHttpRequest.DONE) {
+        location.reload();
+      }
+    }
+    xhr.open("POST", "https://izho4vzq9h.execute-api.eu-central-1.amazonaws.com/dev/admin/addfreedates", true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('Authorization', getCookie("auth"));
+    xhr.send(JSON.stringify({
+      "PLZ": plz,
+      "Datum": date,
+      "Termine": times
+    }));
+    showUserDate();
+  }
+
+  function distDates() {
+    var form = document.getElementById('distDatesForm');
+    plz = new FormData(form).get('distPlz');
+    n = new FormData(form).get('distN');
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState == XMLHttpRequest.DONE) {
+        location.reload();
+      }
+    }
+    xhr.open("POST", "https://izho4vzq9h.execute-api.eu-central-1.amazonaws.com/dev/admin/distributedates ", true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('Authorization', getCookie("auth"));
+    xhr.send(JSON.stringify({
+      "PLZ": plz,
+      "n": parseInt(n, 10)
+    }));
+  }
+
+  function updateOldUser() {
+    var form = document.getElementById('oldUserForm');
+    plz = new FormData(form).get('oldPlz');
+    n = new FormData(form).get('oldN');
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState == XMLHttpRequest.DONE) {
+        location.reload();
+      }
+    }
+    xhr.open("POST", "https://izho4vzq9h.execute-api.eu-central-1.amazonaws.com/dev/admin/updateolddata ", true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('Authorization', getCookie("auth"));
+    xhr.send(JSON.stringify({
+      "plz": plz,
+      "n": parseInt(n, 10)
+    }));
+  }
+</script>
+<script type="module" src="js/app.js"></script>
+<script src="js/utl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js" integrity="sha384-IQsoLXl5PILFhosVNubq5LC7Qb9DXgDA9i+tQ8Zj3iwWAwPtgFTxbJ8NT4GN1R8p" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js" integrity="sha384-cVKIPhGWiC2Al4u+LWgxfKTRIcfu0JTxR+EQDz/bgldoEyl4H0zUF0QKbrJ0EcQF" crossorigin="anonymous"></script>

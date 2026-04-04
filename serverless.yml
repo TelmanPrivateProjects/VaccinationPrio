@@ -1,0 +1,569 @@
+service: DSG-Task3-M
+
+frameworkVersion: '2 || 3'
+
+
+provider:
+  name: aws
+  runtime: python3.8
+  lambdaHashingVersion: 20201221
+  region: eu-central-1
+
+custom:
+  accountID: 524748656081
+
+functions:
+  readItem:
+    handler: readItem.readItem
+    events:
+      - http:
+          path: user/readitem
+          method: post
+          integration: lambda
+          request:
+            template:
+              application/json: '{"ID" : $context.authorizer.ID}'          
+          authorizer:
+            name: lambdaAuthorizer
+            resultTtlInSeconds: 0
+            identitySource: method.request.header.Authorization
+            type: token
+    iamRoleStatementsName: readItemM
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action: "dynamodb:GetItem"        
+        Resource: 
+          - "Fn::GetAtt": [ vaccTableM, Arn ]
+
+  writeItem:
+    handler: writeItem.writeItem
+    events:
+      - http:
+          path: user/writeitem
+          method: post
+          integration: lambda
+          request:
+            template:
+              application/json: ''
+    iamRoleStatementsName: writeItemM
+    iamRoleStatements:
+      - Effect: "Allow"        
+        Action: "dynamodb:PutItem"        
+        Resource: 
+          - "Fn::GetAtt": [ vaccTableM, Arn ]
+
+  updateLastName:
+    handler: update.updateLastName
+    events:
+      - http:
+          path: user/updatelastname
+          method: post
+          integration: lambda
+          request:
+            template:
+              application/json: '{"ID" : $context.authorizer.ID, "name" : $input.params("name")}'          
+          authorizer:
+            name: lambdaAuthorizer
+            resultTtlInSeconds: 0
+            identitySource: method.request.header.Authorization
+            type: token       
+    iamRoleStatementsName: updateLastNameM
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action: 
+          - "dynamodb:UpdateItem"
+        Resource: 
+          - "Fn::GetAtt": [ vaccTableM, Arn ]
+      - Effect: "Allow"
+        Action: 
+          - "lambda:InvokeFunction"
+          - "lambda:GetFunction"
+        Resource: "arn:aws:lambda:${self:provider.region}:${self:custom.accountID}:function:DSG-Task3-M-${sls:stage}-updatePrio"          
+
+  updateFirstName:
+    handler: update.updateFirstName
+    events:
+      - http:
+          path: user/updatefirstname
+          method: post
+          integration: lambda
+          request:
+            template:
+              application/json: '{"ID" : $context.authorizer.ID, "vorname" : $input.params("vorname")}'          
+          authorizer:
+            name: lambdaAuthorizer
+            resultTtlInSeconds: 0
+            identitySource: method.request.header.Authorization
+            type: token    
+    iamRoleStatementsName: updateFirstNameM
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action: "dynamodb:UpdateItem"
+        Resource: 
+          - "Fn::GetAtt": [ vaccTableM, Arn ]
+      - Effect: "Allow"
+        Action: 
+          - "lambda:InvokeFunction"
+          - "lambda:GetFunction"
+        Resource: "arn:aws:lambda:${self:provider.region}:${self:custom.accountID}:function:DSG-Task3-M-${sls:stage}-updatePrio"              
+
+  updateMail:
+    handler: update.updateMail
+    events:
+      - http:
+          path: user/updatemail
+          method: post
+          integration: lambda
+          request:
+            template:
+              application/json: '{"ID" : $context.authorizer.ID, "mail" : $input.params("mail")}'          
+          authorizer:
+            name: lambdaAuthorizer
+            resultTtlInSeconds: 0
+            identitySource: method.request.header.Authorization
+            type: token       
+    iamRoleStatementsName: updateMailM
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action: "dynamodb:UpdateItem"
+        Resource: 
+          - "Fn::GetAtt": [ vaccTableM, Arn ]
+      - Effect: "Allow"
+        Action: 
+          - "lambda:InvokeFunction"
+          - "lambda:GetFunction"
+        Resource: "arn:aws:lambda:${self:provider.region}:${self:custom.accountID}:function:DSG-Task3-M-${sls:stage}-updatePrio"              
+
+  updateBirthday:
+    handler: update.updateBirthday
+    events:
+      - http:
+          path: user/updatebirthday
+          method: post
+          integration: lambda
+          request:
+            template:
+              application/json: '{"ID" : $context.authorizer.ID, "geburtstag" : $input.params("geburtstag")}'          
+          authorizer:
+            name: lambdaAuthorizer
+            resultTtlInSeconds: 0
+            identitySource: method.request.header.Authorization
+            type: token      
+    iamRoleStatementsName: updateBirthdayM
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action: "dynamodb:UpdateItem"
+        Resource: 
+          - "Fn::GetAtt": [ vaccTableM, Arn ]
+      - Effect: "Allow"
+        Action: 
+          - "lambda:InvokeFunction"
+          - "lambda:GetFunction"
+        Resource: "arn:aws:lambda:${self:provider.region}:${self:custom.accountID}:function:DSG-Task3-M-${sls:stage}-updatePrio"              
+
+  updateZipcode:
+    handler: update.updateZipcode
+    events:
+      - http:
+          path: user/updatezipcode
+          method: post
+          integration: lambda
+          request:
+            template:
+              application/json: '{"ID" : $context.authorizer.ID, "plz" : $input.params("plz")}'          
+          authorizer:
+            name: lambdaAuthorizer
+            resultTtlInSeconds: 0
+            identitySource: method.request.header.Authorization
+            type: token     
+    iamRoleStatementsName: updateZipcodeM
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action: "dynamodb:UpdateItem"
+        Resource: 
+          - "Fn::GetAtt": [ vaccTableM, Arn ]
+      - Effect: "Allow"
+        Action: 
+          - "lambda:InvokeFunction"
+          - "lambda:GetFunction"
+        Resource: "arn:aws:lambda:${self:provider.region}:${self:custom.accountID}:function:DSG-Task3-M-${sls:stage}-updatePrio"              
+      
+  updateGender:
+    handler: update.updateGender
+    events:
+      - http:
+          path: user/updategender
+          method: post
+          integration: lambda
+          request:
+            template:
+              application/json: '{"ID" : $context.authorizer.ID, "geschlecht" : $input.params("geschlecht")}'          
+          authorizer:
+            name: lambdaAuthorizer
+            resultTtlInSeconds: 0
+            identitySource: method.request.header.Authorization
+            type: token  
+    iamRoleStatementsName: updateGenderM
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action: "dynamodb:UpdateItem"
+        Resource: 
+          - "Fn::GetAtt": [ vaccTableM, Arn ]
+      - Effect: "Allow"
+        Action: 
+          - "lambda:InvokeFunction"
+          - "lambda:GetFunction"
+        Resource: "arn:aws:lambda:${self:provider.region}:${self:custom.accountID}:function:DSG-Task3-M-${sls:stage}-updatePrio"              
+
+  updateSysRel:
+    handler: update.updateSysRel
+    events:
+      - http:
+          path: user/updatesysrel
+          method: post
+          integration: lambda
+          request:
+            template:
+              application/json: '{"ID" : $context.authorizer.ID, "systemrelevanz" : $input.params("systemrelevanz")}'          
+          authorizer:
+            name: lambdaAuthorizer
+            resultTtlInSeconds: 0
+            identitySource: method.request.header.Authorization
+            type: token      
+    iamRoleStatementsName: updateSysRelM
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action: "dynamodb:UpdateItem"
+        Resource: 
+          - "Fn::GetAtt": [ vaccTableM, Arn ]
+      - Effect: "Allow"
+        Action: 
+          - "lambda:InvokeFunction"
+          - "lambda:GetFunction"
+        Resource: "arn:aws:lambda:${self:provider.region}:${self:custom.accountID}:function:DSG-Task3-M-${sls:stage}-updatePrio"              
+
+  updateHealthPr:
+    handler: update.updateHealthPr
+    events:
+      - http:
+          path: user/updatehealthpr
+          method: post
+          integration: lambda
+          request:
+            template:
+              application/json: '{"ID" : $context.authorizer.ID, "healthPr" : $input.params("healthPr")}'          
+          authorizer:
+            name: lambdaAuthorizer
+            resultTtlInSeconds: 0
+            identitySource: method.request.header.Authorization
+            type: token      
+    iamRoleStatementsName: updateHealthPrM
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action: "dynamodb:UpdateItem"
+        Resource: 
+          - "Fn::GetAtt": [ vaccTableM, Arn ]
+      - Effect: "Allow"
+        Action: 
+          - "lambda:InvokeFunction"
+          - "lambda:GetFunction"
+        Resource: "arn:aws:lambda:${self:provider.region}:${self:custom.accountID}:function:DSG-Task3-M-${sls:stage}-updatePrio"             
+
+  updateOldData:
+    handler: update.updateOldData
+    events:
+      - http:
+          path: admin/updateolddata
+          method: post
+          integration: lambda
+          request:
+            template:
+              application/json: ''
+          authorizer:
+            name: CognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn:
+              Fn::GetAtt:
+                - CognitoUserPool
+                - Arn      
+    iamRoleStatementsName: updateOldData
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action: "dynamodb:Query"
+        Resource: 
+          - "Fn::Join": ['/', ["Fn::GetAtt": [ vaccTableM, Arn ], 'index', 'PLZ-index']]
+      - Effect: "Allow"
+        Action: 
+          - "lambda:InvokeFunction"
+          - "lambda:GetFunction"
+        Resource: "arn:aws:lambda:${self:provider.region}:${self:custom.accountID}:function:DSG-Task3-M-${sls:stage}-updatePrio"       
+      - Effect: "Allow"
+        Action: "dynamodb:UpdateItem"
+        Resource: 
+          - "Fn::GetAtt": [ vaccTableM, Arn ]           
+
+  deleteItem:
+    handler: delete.deleteItem
+    iamRoleStatementsName: deleteItemM
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action: "dynamodb:DeleteItem"        
+        Resource: 
+          - "Fn::GetAtt": [ vaccTableM, Arn ]
+
+  specialFunction:
+    handler: function.specialFunction
+    events:
+      - http:
+          path: admin/specialfunction
+          method: post
+          integration: lambda
+          request:
+            template:
+              application/json: ''
+          authorizer:
+            name: CognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn:
+              Fn::GetAtt:
+                - CognitoUserPool
+                - Arn    
+    iamRoleStatementsName: specialFunctionM
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action: "dynamodb:Scan"        
+        Resource: 
+          - "Fn::GetAtt": [ vaccTableM, Arn ]
+
+  updatePrio:
+    handler: update.updatePrio
+    iamRoleStatementsName: updatePrioM
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action: 
+          - "dynamodb:Query"
+          - "dynamodb:UpdateItem"      
+        Resource: 
+          - "Fn::GetAtt": [ vaccTableM, Arn ]
+
+  getUserByZipcode:
+    handler: getUserByZipcode.getUserByZipcode
+    events:
+      - http:
+          path: admin/getuserbyzipcode
+          method: post
+          integration: lambda
+          request:
+            template:
+              application/json: ''
+          authorizer:
+            name: CognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn:
+              Fn::GetAtt:
+                - CognitoUserPool
+                - Arn      
+    iamRoleStatementsName: getUserByZipcodeM
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action: "dynamodb:Query"
+        Resource: 
+          - "Fn::Join": ['/', ["Fn::GetAtt": [ vaccTableM, Arn ], 'index', 'PLZ-index']]
+
+  getUserByPrio:
+    handler: getUserByPrio.getUserByPrio
+    events:
+      - http:
+          path: admin/getuserbyprio
+          method: post
+          integration: lambda
+          request:
+            template:
+              application/json: ''
+          authorizer:
+            name: CognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn:
+              Fn::GetAtt:
+                - CognitoUserPool
+                - Arn      
+    iamRoleStatementsName: getUserByPrioM
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action: "dynamodb:Query"
+        Resource: 
+          - "Fn::Join": ['/', ["Fn::GetAtt": [ vaccTableM, Arn ], 'index', 'Prio-index']]          
+
+  lambdaAuthorizer:
+    handler: lambdaAuthorizer.lambda_handler
+    iamRoleStatementsName: lambdaAuthorizerM
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action: "dynamodb:Scan"        
+        Resource: 
+          - "Fn::GetAtt": [ vaccTableM, Arn ]    
+
+  addFreeDates:
+    handler: addFreeDates.addFreeDates
+    events:
+      - http:
+          path: admin/addfreedates
+          method: post
+          integration: lambda
+          request:
+            template:
+              application/json: ''
+          authorizer:
+            name: CognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn:
+              Fn::GetAtt:
+                - CognitoUserPool
+                - Arn     
+    iamRoleStatementsName: addFreeDatesM
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action: 
+          - "dynamodb:Query"
+          - "dynamodb:UpdateItem"                  
+        Resource: 
+          - "Fn::GetAtt": [ datesTableM, Arn ]  
+      - Effect: "Allow"
+        Action: 
+          - "dynamodb:UpdateItem"    
+        Resource: 
+          - "Fn::GetAtt": [ vaccTableM, Arn ]         
+      - Effect: "Allow"
+        Action: "dynamodb:Query"
+        Resource: 
+          - "Fn::Join": ['/', ["Fn::GetAtt": [ vaccTableM, Arn ], 'index', 'PLZ-index']]
+      - Effect: "Allow"
+        Action: "ses:SendEmail"  
+        Resource: 
+          - arn:aws:ses:${self:provider.region}:${self:custom.accountID}:identity/*              
+
+  distributeDates:
+    handler: distributeDates.distributeDates
+    events:
+      - http:
+          path: admin/distributedates
+          method: post
+          integration: lambda
+          request:
+            template:
+              application/json: ''
+          authorizer:
+            name: CognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn:
+              Fn::GetAtt:
+                - CognitoUserPool
+                - Arn     
+    iamRoleStatementsName: distributeDatesM
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action: 
+          - "dynamodb:Query"
+          - "dynamodb:UpdateItem"     
+          - "dynamodb:DeleteItem"                            
+        Resource: 
+          - "Fn::GetAtt": [ datesTableM, Arn ]  
+      - Effect: "Allow"
+        Action: 
+          - "dynamodb:UpdateItem"   
+        Resource: 
+          - "Fn::GetAtt": [ vaccTableM, Arn ]         
+      - Effect: "Allow"
+        Action: "dynamodb:Query"
+        Resource: 
+          - "Fn::Join": ['/', ["Fn::GetAtt": [ vaccTableM, Arn ], 'index', 'PLZ-index']]
+      - Effect: "Allow"
+        Action: "ses:SendEmail"  
+        Resource: 
+          - arn:aws:ses:${self:provider.region}:${self:custom.accountID}:identity/*              
+
+plugins:
+  - serverless-iam-roles-per-function
+
+resources:
+  Resources:
+    CognitoUserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: M-user-pool
+        UsernameAttributes:
+          - email
+        AutoVerifiedAttributes:
+          - email
+    CognitoUserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: M-user-pool-client
+        UserPoolId:
+          Ref: CognitoUserPool
+        GenerateSecret: false     
+        CallbackURLs: 
+          - "https://uni-bamberg.de"   
+        LogoutURLs:   
+          - "https://uni-bamberg.de"   
+        AllowedOAuthScopes:
+          - email
+          - openid
+        AllowedOAuthFlows:
+          - code
+          - implicit   
+        SupportedIdentityProviders: 
+          - COGNITO    
+        AllowedOAuthFlowsUserPoolClient: true  
+    UserPoolDomain: 
+      Type: AWS::Cognito::UserPoolDomain 
+      Properties:
+        UserPoolId: !Ref CognitoUserPool 
+        Domain: "dsg-task3-m-userpool"         
+
+    vaccTableM:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: vaccTableM
+        AttributeDefinitions:
+          - AttributeName: ID
+            AttributeType: N
+          - AttributeName: PLZ
+            AttributeType: S       
+          - AttributeName: Priorisierungsgruppe
+            AttributeType: N                    
+        KeySchema:
+          - AttributeName: ID
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: PLZ-index
+            KeySchema:
+              - AttributeName: PLZ
+                KeyType: HASH
+              - AttributeName: Priorisierungsgruppe
+                KeyType: RANGE 
+            Projection:
+              ProjectionType: 'ALL'     
+          - IndexName: Prio-index
+            KeySchema:
+              - AttributeName: Priorisierungsgruppe
+                KeyType: HASH
+            Projection:
+              ProjectionType: 'ALL'                
+        BillingMode: PAY_PER_REQUEST
+
+    datesTableM:
+        Type: AWS::DynamoDB::Table
+        Properties:
+          TableName: datesTableM
+          AttributeDefinitions:
+            - AttributeName: PLZ
+              AttributeType: S
+            - AttributeName: Datum
+              AttributeType: S                     
+          KeySchema:
+            - AttributeName: PLZ
+              KeyType: HASH
+            - AttributeName: Datum
+              KeyType: RANGE        
+          BillingMode: PAY_PER_REQUEST        
