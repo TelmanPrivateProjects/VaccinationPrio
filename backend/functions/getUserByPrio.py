@@ -22,4 +22,4 @@ def getUserByPrio(event, context):
             KeyConditionExpression=Key('Priorisierungsgruppe').eq(prio))
         return response["Items"]
     except KeyError as e:
-        "Something went wrong..."
+        return "Something went wrong..."

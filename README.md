@@ -27,6 +27,7 @@ A **serverless, event-driven web application on AWS** for organizing a vaccinati
 - [Data model](#data-model)
 - [Security model](#security-model)
 - [Project structure](#project-structure)
+- [Testing](#testing)
 - [Deployment](#deployment)
 - [Limitations and possible improvements](#limitations-and-possible-improvements)
 - [Team](#team)
@@ -165,7 +166,7 @@ sequenceDiagram
     Admin->>FE: zip code, day, list of time slots
     FE->>GW: POST /admin/addfreedates (Cognito ID token)
     GW->>AF: event {PLZ, Datum, Termine}
-    AF->>VT: query people (group <= 3) without appointment<br/>(sorted by priority group)
+    AF->>VT: query eligible people (groups 1-3) without appointment<br/>(sorted by priority group)
     loop for each slot while people are waiting
         AF->>VT: set Termin
         AF->>SES: send appointment e-mail
@@ -185,9 +186,9 @@ The same rules are implemented in `writeItem` (on registration) and `updatePrio`
 | **1** | Age 60 or older |
 | **2** | Age 40–59, **or** age 18–39 with a critical-infrastructure job or pre-existing conditions |
 | **3** | Age 18–39 |
-| **-1** | Under 18 (not eligible) |
+| **-1** | Under 18 (not eligible, never booked) |
 
-Groups 1–3 are ranked in ascending order: group 1 has the highest priority. Appointment queries use the `PLZ-index`, whose sort key is the priority group, so people are returned in priority order.
+Groups 1–3 are ranked in ascending order: group 1 has the highest priority. Appointment queries use the `PLZ-index` with the key condition `Priorisierungsgruppe BETWEEN 1 AND 3`, so people under 18 are excluded and everyone else is returned in priority order.
 
 ---
 
@@ -214,7 +215,7 @@ All endpoints are `POST` requests. Update endpoints take their value as a query 
 
 | Endpoint | Body | Description |
 |----------|------|-------------|
-| `/admin/getuserbyzipcode` | `{"PLZ": "96047"}` | People in a zip code (group `<= 3`), by priority |
+| `/admin/getuserbyzipcode` | `{"PLZ": "96047"}` | People in a zip code (groups `<= 3`, including `-1`), by priority |
 | `/admin/getuserbyprio` | `{"prio": 1}` | All people in a priority group |
 | `/admin/specialfunction` | `{"PLZ": "96047", "prio": 2, "amount": 10}` | Oldest *n* people of a group in a zip code |
 | `/admin/addfreedates` | `{"PLZ": "96047", "Datum": "2021-12-24", "Termine": ["09:00", "09:15"]}` | Publish and assign slots |
@@ -253,7 +254,7 @@ Other attributes: `Name`, `Vorname`, `Mail`, `Geburtstag`, `Geschlecht`, `System
 .
 ├── backend/
 │   ├── serverless.yml            # Infrastructure as code: functions, events, IAM, DynamoDB, Cognito
-│   └── functions/
+│   ├── functions/
 │       ├── writeItem.py          # Sign-up + initial priority calculation
 │       ├── readItem.py           # Read own profile
 │       ├── update.py             # 8 profile-update handlers, updatePrio, updateOldData
@@ -264,6 +265,9 @@ Other attributes: `Name`, `Vorname`, `Mail`, `Geburtstag`, `Geschlecht`, `System
 │       ├── addFreeDates.py       # Admin: publish + assign slots, send e-mails
 │       ├── distributeDates.py    # Admin: distribute stored free slots, send e-mails
 │       └── deleteItem.py         # Internal: delete a registration
+│   ├── tests/                    # pytest + moto tests (no AWS account needed)
+│   ├── pytest.ini
+│   └── requirements-dev.txt
 └── frontend/
     ├── index.html                # Citizen login
     ├── reg.html                  # Citizen registration
@@ -278,24 +282,44 @@ Other attributes: `Name`, `Vorname`, `Mail`, `Geburtstag`, `Geschlecht`, `System
 
 ---
 
+## Testing
+
+The backend is tested with **pytest** and **[moto](https://github.com/getmoto/moto)**, which emulates DynamoDB and SES in memory. No AWS account or credentials are needed.
+
+```bash
+cd backend
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt
+pytest
+```
+
+| Test file | Covers |
+|-----------|--------|
+| `test_priority.py` | Priority rules for every age band and risk factor; a profile update emits the `updatePrio` event and the group is recalculated |
+| `test_appointments.py` | `addFreeDates` and `distributeDates`: every slot is used, priority order, people under 18 are never booked, leftover slots are kept, distribution across several days, e-mail notifications |
+| `test_authorizer_and_routes.py` | The custom authorizer (valid and invalid tokens, scoped policy, `ID` in the context); every API URL called by the frontend exists in `serverless.yml` |
+
+---
+
 ## Deployment
 
 ### Backend
 
-Prerequisites: an AWS account with configured credentials, Node.js and the [Serverless Framework](https://www.serverless.com/framework/docs) (`frameworkVersion: '2 || 3'`).
+Prerequisites: an AWS account with configured credentials, Node.js, the [Serverless Framework](https://www.serverless.com/framework/docs) v3 and a sender address or domain verified in **Amazon SES**.
 
 ```bash
 cd backend
 serverless plugin install -n serverless-iam-roles-per-function
+export SENDER_EMAIL=noreply@your-domain.example   # SES-verified sender for appointment e-mails
 serverless deploy            # deploys to stage "dev" in eu-central-1
 ```
 
+The AWS account ID is resolved automatically from your credentials (`${aws:accountId}`). The name of the `updatePrio` function is passed to the handlers as `UPDATE_PRIO_FUNCTION`, so other stages (`serverless deploy --stage prod`) work without code changes.
+
 Before deploying to your own account:
 - Update `provider.runtime`. The project was built for `python3.8`, which AWS Lambda has deprecated. The code uses only `boto3` and the standard library, so a current Python runtime should work.
-- Set `custom.accountID` in `serverless.yml` to your AWS account ID.
-- Verify a sender address in **Amazon SES** and use it as `Source` in `addFreeDates.py` and `distributeDates.py`. In the SES sandbox, recipient addresses must be verified too.
+- In the SES sandbox, recipient addresses must be verified too.
 - Change the Cognito domain (`UserPoolDomain`) and the callback/logout URLs to values that fit your deployment.
-- `update.py` invokes `DSG-Task3-M-dev-updatePrio`. Adjust the name if you deploy with another service name or stage.
 
 ### Frontend
 
@@ -313,9 +337,9 @@ This project was built as a prototype for a university course. A production syst
 
 - **Asynchronous events:** follow-up events are synchronous Lambda invocations. Using DynamoDB Streams, Amazon EventBridge or SQS would decouple the producers from `updatePrio` and add retries and dead-letter queues.
 - **Authentication:** citizens use a custom token (mail + unsalted SHA-256 hash) stored in a cookie. Moving citizens to Cognito as well, or using salted password hashing and short-lived tokens, would be more secure. The authorizer looks up users with a table `Scan`; a GSI on `Mail` would make this a `Query`.
-- **Configuration:** API URLs, the sender e-mail address and the AWS account ID are hard-coded. They could be passed in as environment variables and stack outputs.
+- **Frontend configuration:** the API Gateway URL and the Cognito client settings are hard-coded in the frontend. They could be generated from the stack outputs at deploy time.
 - **IDs:** registration IDs are derived from the timestamp. A UUID would guarantee uniqueness.
-- **Testing and CI:** automated tests (e.g. with `moto`) and a deployment pipeline are not included.
+- **CI/CD:** the backend has automated tests, but there is no pipeline that runs them and deploys on every change.
 
 ---
 

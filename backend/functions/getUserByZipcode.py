@@ -23,4 +23,4 @@ def getUserByZipcode(event, context):
             KeyConditionExpression=Key('PLZ').eq(plz) & Key('Priorisierungsgruppe').lte(3))
         return response["Items"]
     except KeyError as e:
-        "Something went wrong..."
+        return "Something went wrong..."

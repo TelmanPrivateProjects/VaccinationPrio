@@ -18,9 +18,16 @@ provider:
   runtime: python3.8
   lambdaHashingVersion: 20201221
   region: eu-central-1
+  environment:
+    # Verified Amazon SES sender address for appointment e-mails.
+    # Set it before deploying:  export SENDER_EMAIL=noreply@your-domain.example
+    SENDER_EMAIL: ${env:SENDER_EMAIL}
+    # Function invoked after every profile change to recompute the priority group
+    UPDATE_PRIO_FUNCTION: ${self:service}-${sls:stage}-updatePrio
 
 custom:
-  accountID: 524748656081
+  # Resolved from the deploying AWS credentials (used in IAM resource ARNs)
+  accountID: ${aws:accountId}
 
 # -----------------------------------------------------------------------------
 # Functions

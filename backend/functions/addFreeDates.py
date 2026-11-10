@@ -1,4 +1,6 @@
 """Lambda (admin): add vaccination slots, assign them and notify people by e-mail."""
+import os
+
 import boto3
 import botocore
 from boto3.dynamodb.conditions import Key
@@ -28,20 +30,20 @@ def addFreeDates(event, context):
         termine = event["Termine"]
         i = 0
 
-        # People in this zip code with priority group <= 3 and no appointment yet,
-        # returned in priority order by the PLZ-index sort key
+        # Eligible people (groups 1-3, so people under 18 with group -1 are
+        # excluded) without an appointment, in priority order (PLZ-index sort key)
         response = vaccTableM.query(
-            TableName='vaccTableM',
             IndexName='PLZ-index',
             Select='ALL_PROJECTED_ATTRIBUTES',
             KeyConditionExpression=Key('PLZ').eq(
-                plz) & Key('Priorisierungsgruppe').lte(3),
+                plz) & Key('Priorisierungsgruppe').between(1, 3),
             FilterExpression="attribute_not_exists(Termin)")
 
         entries = response["Items"]
 
         if entries:
-            for termin in event["Termine"]:
+            # Iterate over a copy: booked slots are removed from `termine` in the loop
+            for termin in list(termine):
                 if len(entries) > i:
                     vaccTableM.update_item(
                         Key={
@@ -56,7 +58,7 @@ def addFreeDates(event, context):
                     # Notify the person; a failed e-mail does not undo the booking
                     try:
                         ses.send_email(
-                            Source='maximilian.goetz@stud.uni-bamberg.de',
+                            Source=os.environ['SENDER_EMAIL'],
                             Destination={
                                 'ToAddresses': [
                                     entries[i]["Mail"]

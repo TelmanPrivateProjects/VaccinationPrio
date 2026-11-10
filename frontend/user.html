@@ -246,7 +246,7 @@
     $('#Mail').editable({
       url: 'https://izho4vzq9h.execute-api.eu-central-1.amazonaws.com/dev/user/dummy',
       success: function(response, newValue) {
-        xhrUpdate.open("POST", 'https://izho4vzq9h.execute-api.eu-central-1.amazonaws.com/dev/user/updateMail?mail="' + newValue + '"', true);
+        xhrUpdate.open("POST", 'https://izho4vzq9h.execute-api.eu-central-1.amazonaws.com/dev/user/updatemail?mail="' + newValue + '"', true);
         xhrUpdate.setRequestHeader('Content-Type', 'application/json');
         xhrUpdate.setRequestHeader('Authorization', getCookie("auth"));
         xhrUpdate.send();

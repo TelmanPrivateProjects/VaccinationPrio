@@ -1,4 +1,6 @@
 """Lambda (admin): distribute stored free vaccination slots to waiting people."""
+import os
+
 import boto3
 from boto3.dynamodb.conditions import Key
 
@@ -25,50 +27,41 @@ def distributeDates(event, context):
         n = event["n"]
         i = 0
 
-        # Get all persons and available dates
+        # Eligible people (groups 1-3, so people under 18 with group -1 are
+        # excluded) without an appointment, in priority order (PLZ-index sort key)
         responseVacc = vaccTableM.query(
-            TableName='vaccTableM',
             IndexName='PLZ-index',
             Select='ALL_PROJECTED_ATTRIBUTES',
             KeyConditionExpression=Key('PLZ').eq(
-                plz) & Key('Priorisierungsgruppe').lte(3),
+                plz) & Key('Priorisierungsgruppe').between(1, 3),
             FilterExpression="attribute_not_exists(Termin)")
 
-        responseDates = vaccTableM.query(
-            TableName='datesTableM',
+        # Free slots of this zip code, ordered by day (Datum sort key)
+        responseDates = datesTableM.query(
             KeyConditionExpression=Key('PLZ').eq(plz))
 
         entries = responseVacc["Items"]
         dates = responseDates["Items"]
 
-        # Check if enough people are aviable for distrubuition
+        # Never book more people than are waiting
         if n > len(entries):
             n = len(entries)
 
-        # Three cases per stored date:
-        #   count == n -> use all slots of this date, delete it, done
-        #   count >  n -> use slots of this date, keep the rest, done
-        #   count <  n -> use all slots, delete the date, continue with the next one
+        # Walk through the days and book slots until n people are served.
+        # A fully used day is deleted; a partly used day keeps its remaining slots.
         for date in dates:
-            count = len(date["Termine"])
-            if(count == n):
-                for time in date["Termine"]:
-                    addDateToPerson(
-                        entries[i]["ID"], entries[i]["Mail"], date["Datum"], time)
-                    i = i + 1
-
-                datesTableM.delete_item(
-                    Key={'PLZ': plz, 'Datum': date["Datum"]}
-                )
+            if n <= 0:
                 break
-            elif(count > n):
-                date_copy = date["Termine"]
-                for time in date["Termine"]:
-                    addDateToPerson(
-                        entries[i]["ID"], entries[i]["Mail"], date["Datum"], time)
-                    date_copy.remove(time)
-                    i = i + 1
+            slots = list(date["Termine"])
+            used, remaining = slots[:n], slots[n:]
 
+            for time in used:
+                addDateToPerson(
+                    entries[i]["ID"], entries[i]["Mail"], date["Datum"], time)
+                i = i + 1
+            n = n - len(used)
+
+            if remaining:
                 datesTableM.update_item(
                     Key={
                         'PLZ': plz,
@@ -76,22 +69,16 @@ def distributeDates(event, context):
                     },
                     UpdateExpression="SET Termine = :t",
                     ExpressionAttributeValues={
-                        ':t': date_copy
+                        ':t': remaining
                     },
                     ReturnValues="UPDATED_NEW"
                 )
-                break
             else:
-                for time in date["Termine"]:
-                    addDateToPerson(
-                        entries[i]["ID"], entries[i]["Mail"], date["Datum"], time)
-                    i = i + 1
-
                 datesTableM.delete_item(
                     Key={'PLZ': plz, 'Datum': date["Datum"]}
                 )
-                n = n - count
 
+        return "Dates distributed!"
     except KeyError as e:
         return "Something went wrong ..."
 
@@ -111,7 +98,7 @@ def addDateToPerson(id, mail, date, time):
     )
 
     ses.send_email(
-        Source='maximilian.goetz@stud.uni-bamberg.de',
+        Source=os.environ['SENDER_EMAIL'],
         Destination={
             'ToAddresses': [
                 mail

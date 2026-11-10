@@ -1,5 +1,7 @@
 """Lambdas: profile updates, priority recalculation and legacy data migration."""
 import json
+import os
+
 import boto3
 from boto3.dynamodb.conditions import Key
 from datetime import date
@@ -7,9 +9,9 @@ from datetime import date
 dynamodb = boto3.resource('dynamodb')
 client = boto3.client('lambda')
 table = dynamodb.Table('vaccTableM')
-# Name of the deployed updatePrio function (<service>-<stage>-updatePrio).
+# Name of the deployed updatePrio function (<service>-<stage>-updatePrio), set in serverless.yml.
 # Every profile update invokes it, so the priority group is always derived from the latest data.
-fnameUpdatePrio = 'DSG-Task3-M-dev-updatePrio'
+fnameUpdatePrio = os.environ.get('UPDATE_PRIO_FUNCTION', 'DSG-Task3-M-dev-updatePrio')
 
 
 # ---------------------------------------------------------------------------

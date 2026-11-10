@@ -1,0 +1,6 @@
+# Test dependencies. The Lambda functions themselves only need boto3,
+# which is provided by the AWS Lambda Python runtime.
+boto3
+moto[dynamodb,ses]>=5
+pytest
+pyyaml
