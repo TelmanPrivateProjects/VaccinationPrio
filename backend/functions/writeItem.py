@@ -1,3 +1,4 @@
+"""Lambda: create a new registration in vaccTableM (sign-up)."""
 import json
 import boto3
 from datetime import date
@@ -8,9 +9,18 @@ table = client.Table('vaccTableM')
 
 
 def writeItem(event, context):
+    """Register a new person and store them with their initial priority group.
+
+    Trigger : POST /user/writeitem (public, no authorizer - this is the sign-up)
+    Event   : the registration form as JSON: name, vorname, mail, geburtstag
+              ("dd-mm-yyyy"), plz, geschlecht, systemrelevanz, vorerkrankungen
+              and secret (SHA-256 hash of the password, computed in the browser)
+    Returns : "Entry added!" on success
+    """
 
     versionNumber = 1
-    # calculating priority
+    # Calculate the priority group from age and risk factors.
+    # The same rules are applied again in update.updatePrio whenever the profile changes.
     splitDate = event['geburtstag'].split("-")
     birthDate = date(int(splitDate[2]), int(splitDate[1]), int(splitDate[0]))
     today = date.today()
@@ -21,6 +31,7 @@ def writeItem(event, context):
     sysRel = event["systemrelevanz"]
     vorerkrankung = event["vorerkrankungen"]
 
+    # 1 = age >= 60 | 2 = age 40-59 | 3 = age 18-39 | -1 = under 18 (not eligible)
     if age >= 60:
         prio = 1
     elif age < 60 and age >= 40:
@@ -30,10 +41,11 @@ def writeItem(event, context):
     else:
         prio = 3
 
+    # Critical-infrastructure workers and people with pre-existing conditions move up to group 2
     if prio == 3 and (sysRel or vorerkrankung):
         prio = 2
 
-    # calculating ID
+    # Generate a numeric ID from the current timestamp (year..microsecond, not zero-padded)
     id = int(str(current_datetime.year) + str(current_datetime.month) + str(current_datetime.day) + str(current_datetime.hour) +
              str(current_datetime.minute) + str(current_datetime.second) + str(current_datetime.microsecond))
 

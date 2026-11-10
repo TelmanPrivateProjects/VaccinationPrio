@@ -1,3 +1,4 @@
+"""Lambda (admin): distribute stored free vaccination slots to waiting people."""
 import boto3
 from boto3.dynamodb.conditions import Key
 
@@ -8,6 +9,15 @@ ses = boto3.client('ses')
 
 
 def distributeDates(event, context):
+    """Hand out stored free slots of a zip code area to the next `n` people.
+
+    Trigger : POST /admin/distributedates, protected by the Cognito authorizer
+    Event   : {"PLZ": "<zip code>", "n": <number of people>}
+    Flow    : walks through the free dates of the zip code in datesTableM and
+              books slots for people without an appointment (priority order)
+              until `n` people are served. Fully used dates are deleted, a partly
+              used date keeps its remaining slots. Every booking sends an e-mail.
+    """
 
     try:
 
@@ -35,6 +45,10 @@ def distributeDates(event, context):
         if n > len(entries):
             n = len(entries)
 
+        # Three cases per stored date:
+        #   count == n -> use all slots of this date, delete it, done
+        #   count >  n -> use slots of this date, keep the rest, done
+        #   count <  n -> use all slots, delete the date, continue with the next one
         for date in dates:
             count = len(date["Termine"])
             if(count == n):
@@ -82,7 +96,7 @@ def distributeDates(event, context):
         return "Something went wrong ..."
 
 
-# Function to add a date to person and send an email
+# Book a slot for one person (vaccTableM.Termin) and notify them by e-mail via SES
 def addDateToPerson(id, mail, date, time):
 
     vaccTableM.update_item(

@@ -1,3 +1,4 @@
+"""Lambda (admin): list registrations by priority group."""
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
 
@@ -6,6 +7,11 @@ table = dynamodb.Table('vaccTableM')
 
 
 def getUserByPrio(event, context):
+    """List all registrations in one priority group (uses the Prio-index GSI).
+
+    Trigger : POST /admin/getuserbyprio, protected by the Cognito authorizer
+    Event   : {"prio": <group>}
+    """
     prio = event["prio"]
 
     try:

@@ -1,3 +1,9 @@
+/*
+ * Registration logic for reg.html.
+ * Builds the JSON body from the form (password -> SHA-256 hash, checkboxes -> booleans,
+ * birthday -> "dd-mm-yyyy"), stores the "auth" cookie used by the lambdaAuthorizer and
+ * sends the registration to POST /user/writeitem.
+ */
 import FetchService from './service/FetchService.js';
 
 
