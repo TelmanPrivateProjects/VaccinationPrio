@@ -1,4 +1,7 @@
+"""Lambdas: profile updates, priority recalculation and legacy data migration."""
 import json
+import os
+
 import boto3
 from boto3.dynamodb.conditions import Key
 from datetime import date
@@ -6,10 +9,26 @@ from datetime import date
 dynamodb = boto3.resource('dynamodb')
 client = boto3.client('lambda')
 table = dynamodb.Table('vaccTableM')
-fnameUpdatePrio = 'DSG-Task3-M-dev-updatePrio'
+# Name of the deployed updatePrio function (<service>-<stage>-updatePrio), set in serverless.yml.
+# Every profile update invokes it, so the priority group is always derived from the latest data.
+fnameUpdatePrio = os.environ.get('UPDATE_PRIO_FUNCTION', 'DSG-Task3-M-dev-updatePrio')
+
+
+# ---------------------------------------------------------------------------
+# Profile update handlers
+#
+# Trigger : POST /user/update<field>?<param>=<value>, protected by the custom
+#           lambdaAuthorizer. The API Gateway request template builds the event
+#           from the authorizer context (ID) and the query string parameter, so
+#           a user can only change their own record.
+# Flow    : 1. update the field in vaccTableM
+#           2. emit a follow-up event by invoking updatePrio for this ID
+#              (synchronous Lambda-to-Lambda call) to recompute the priority group
+# ---------------------------------------------------------------------------
 
 
 def updateLastName(event, context):
+    """Update the last name (event: ID, name)."""
     try:
         response = table.update_item(
             Key={
@@ -39,6 +58,7 @@ def updateLastName(event, context):
 
 
 def updateFirstName(event, context):
+    """Update the first name (event: ID, vorname)."""
     try:
         response = table.update_item(
             Key={
@@ -65,6 +85,7 @@ def updateFirstName(event, context):
 
 
 def updateMail(event, context):
+    """Update the e-mail address (event: ID, mail)."""
     try:
         response = table.update_item(
             Key={
@@ -91,6 +112,7 @@ def updateMail(event, context):
 
 
 def updateBirthday(event, context):
+    """Update the birthday (event: ID, geburtstag "dd-mm-yyyy"); changes the age-based group."""
     try:
         response = table.update_item(
             Key={
@@ -117,6 +139,7 @@ def updateBirthday(event, context):
 
 
 def updateZipcode(event, context):
+    """Update the zip code (event: ID, plz)."""
     try:
         response = table.update_item(
             Key={
@@ -143,6 +166,7 @@ def updateZipcode(event, context):
 
 
 def updateGender(event, context):
+    """Update the gender (event: ID, geschlecht = m | w | d)."""
     try:
         response = table.update_item(
             Key={
@@ -169,6 +193,7 @@ def updateGender(event, context):
 
 
 def updateSysRel(event, context):
+    """Update the critical-infrastructure flag (event: ID, systemrelevanz)."""
     try:
         response = table.update_item(
             Key={
@@ -195,6 +220,7 @@ def updateSysRel(event, context):
 
 
 def updateHealthPr(event, context):
+    """Update the pre-existing-conditions flag (event: ID, healthPr)."""
     try:
         response = table.update_item(
             Key={
@@ -220,11 +246,24 @@ def updateHealthPr(event, context):
         return "Problem beim Aktualisieren!"
 
 
+# ---------------------------------------------------------------------------
+# Internal event handlers
+# ---------------------------------------------------------------------------
+
 def updatePrio(event, context):
+    """Recompute and store the priority group of one person.
+
+    Trigger : invoked by the profile update handlers and by updateOldData
+              (no HTTP endpoint)
+    Event   : {"ID": <id>}
+    Rules   : same as in writeItem - 1 = age >= 60, 2 = age 40-59, 3 = age 18-39,
+              -1 = under 18; group 3 moves up to 2 with systemrelevanz or vorerkrankungen
+    """
     id = event["ID"]
 
     entry = table.query(KeyConditionExpression=Key('ID').eq(id))
 
+    # Older records may not have the risk-factor attributes yet; treat them as False
     try:
         sysrel = entry["Items"][0]["Systemrelevanz"]
     except KeyError as e:
@@ -271,6 +310,14 @@ def updatePrio(event, context):
 
 
 def updateOldData(event, context):
+    """Migrate up to `n` legacy records of a zip code area to the current data model.
+
+    Trigger : POST /admin/updateolddata, protected by the Cognito authorizer
+    Event   : {"plz": "<zip code>", "n": <max records>}
+    Flow    : selects records without a `Version` attribute, recomputes their
+              priority (invokes updatePrio) and sets Systemrelevanz/Vorerkrankungen
+              to False and Version to 1
+    """
 
     plz = event["plz"]
     n = event["n"]

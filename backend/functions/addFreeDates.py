@@ -1,9 +1,22 @@
+"""Lambda (admin): add vaccination slots, assign them and notify people by e-mail."""
+import os
+
 import boto3
 import botocore
 from boto3.dynamodb.conditions import Key
 
 
 def addFreeDates(event, context):
+    """Publish new vaccination slots for a zip code area and day.
+
+    Trigger : POST /admin/addfreedates, protected by the Cognito authorizer
+    Event   : {"PLZ": "<zip code>", "Datum": "<day>", "Termine": ["<time>", ...]}
+    Flow    : 1. assign the new slots directly to people in that zip code
+                 who have no appointment yet (highest priority first) and notify
+                 each of them by e-mail (SES)
+              2. store the remaining, unassigned slots in datesTableM so they can
+                 be handed out later by distributeDates
+    """
 
     dynamodb = boto3.resource('dynamodb')
     datesTableM = dynamodb.Table('datesTableM')
@@ -17,18 +30,20 @@ def addFreeDates(event, context):
         termine = event["Termine"]
         i = 0
 
+        # Eligible people (groups 1-3, so people under 18 with group -1 are
+        # excluded) without an appointment, in priority order (PLZ-index sort key)
         response = vaccTableM.query(
-            TableName='vaccTableM',
             IndexName='PLZ-index',
             Select='ALL_PROJECTED_ATTRIBUTES',
             KeyConditionExpression=Key('PLZ').eq(
-                plz) & Key('Priorisierungsgruppe').lte(3),
+                plz) & Key('Priorisierungsgruppe').between(1, 3),
             FilterExpression="attribute_not_exists(Termin)")
 
         entries = response["Items"]
 
         if entries:
-            for termin in event["Termine"]:
+            # Iterate over a copy: booked slots are removed from `termine` in the loop
+            for termin in list(termine):
                 if len(entries) > i:
                     vaccTableM.update_item(
                         Key={
@@ -40,9 +55,10 @@ def addFreeDates(event, context):
                         },
                         ReturnValues="UPDATED_NEW"
                     )
+                    # Notify the person; a failed e-mail does not undo the booking
                     try:
                         ses.send_email(
-                            Source='maximilian.goetz@stud.uni-bamberg.de',
+                            Source=os.environ['SENDER_EMAIL'],
                             Destination={
                                 'ToAddresses': [
                                     entries[i]["Mail"]
@@ -69,6 +85,7 @@ def addFreeDates(event, context):
                 else:
                     break
 
+        # Keep the slots that were not assigned as free dates (append to existing ones)
         existingDates = datesTableM.query(
             TableName='datesTableM',
             KeyConditionExpression=Key('PLZ').eq(plz) & Key('Datum').eq(datum))

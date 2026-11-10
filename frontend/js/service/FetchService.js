@@ -1,3 +1,4 @@
+// Small wrapper around fetch() for JSON GET / POST / PUT requests.
 export default class FetchService {
     constructor() {
 

@@ -1,3 +1,13 @@
+# =============================================================================
+# Vaccination Priority System - serverless backend (AWS, event-driven)
+#
+# Every function below is an AWS Lambda that only runs in response to an event:
+#   - HTTP events      : API Gateway REST endpoints (integration: lambda)
+#   - Auth events      : the custom lambdaAuthorizer (/user/*) or Cognito (/admin/*)
+#   - Internal events  : Lambda-to-Lambda invocations (e.g. update* -> updatePrio)
+#
+# Deploy from this folder with:  serverless deploy
+# =============================================================================
 service: DSG-Task3-M
 
 frameworkVersion: '2 || 3'
@@ -8,13 +18,31 @@ provider:
   runtime: python3.8
   lambdaHashingVersion: 20201221
   region: eu-central-1
+  environment:
+    # Verified Amazon SES sender address for appointment e-mails.
+    # Set it before deploying:  export SENDER_EMAIL=noreply@your-domain.example
+    SENDER_EMAIL: ${env:SENDER_EMAIL}
+    # Function invoked after every profile change to recompute the priority group
+    UPDATE_PRIO_FUNCTION: ${self:service}-${sls:stage}-updatePrio
 
 custom:
-  accountID: 524748656081
+  # Resolved from the deploying AWS credentials (used in IAM resource ARNs)
+  accountID: ${aws:accountId}
 
+# -----------------------------------------------------------------------------
+# Functions
+#   /user/*  : citizen endpoints, secured by the custom lambdaAuthorizer
+#              (the authorizer injects the caller's ID into the request template)
+#   /admin/* : health-authority endpoints, secured by the Cognito user pool
+#   no event : internal functions, only invoked by other functions
+# Each function gets its own least-privilege IAM role
+# (plugin: serverless-iam-roles-per-function).
+# -----------------------------------------------------------------------------
 functions:
+  # ---------- Citizen endpoints (/user/*) ----------
+
   readItem:
-    handler: readItem.readItem
+    handler: functions/readItem.readItem
     events:
       - http:
           path: user/readitem
@@ -35,8 +63,9 @@ functions:
         Resource: 
           - "Fn::GetAtt": [ vaccTableM, Arn ]
 
+  # Public sign-up endpoint (no authorizer)
   writeItem:
-    handler: writeItem.writeItem
+    handler: functions/writeItem.writeItem
     events:
       - http:
           path: user/writeitem
@@ -52,8 +81,9 @@ functions:
         Resource: 
           - "Fn::GetAtt": [ vaccTableM, Arn ]
 
+  # Profile updates: each one updates vaccTableM and then invokes updatePrio
   updateLastName:
-    handler: update.updateLastName
+    handler: functions/update.updateLastName
     events:
       - http:
           path: user/updatelastname
@@ -81,7 +111,7 @@ functions:
         Resource: "arn:aws:lambda:${self:provider.region}:${self:custom.accountID}:function:DSG-Task3-M-${sls:stage}-updatePrio"          
 
   updateFirstName:
-    handler: update.updateFirstName
+    handler: functions/update.updateFirstName
     events:
       - http:
           path: user/updatefirstname
@@ -108,7 +138,7 @@ functions:
         Resource: "arn:aws:lambda:${self:provider.region}:${self:custom.accountID}:function:DSG-Task3-M-${sls:stage}-updatePrio"              
 
   updateMail:
-    handler: update.updateMail
+    handler: functions/update.updateMail
     events:
       - http:
           path: user/updatemail
@@ -135,7 +165,7 @@ functions:
         Resource: "arn:aws:lambda:${self:provider.region}:${self:custom.accountID}:function:DSG-Task3-M-${sls:stage}-updatePrio"              
 
   updateBirthday:
-    handler: update.updateBirthday
+    handler: functions/update.updateBirthday
     events:
       - http:
           path: user/updatebirthday
@@ -162,7 +192,7 @@ functions:
         Resource: "arn:aws:lambda:${self:provider.region}:${self:custom.accountID}:function:DSG-Task3-M-${sls:stage}-updatePrio"              
 
   updateZipcode:
-    handler: update.updateZipcode
+    handler: functions/update.updateZipcode
     events:
       - http:
           path: user/updatezipcode
@@ -189,7 +219,7 @@ functions:
         Resource: "arn:aws:lambda:${self:provider.region}:${self:custom.accountID}:function:DSG-Task3-M-${sls:stage}-updatePrio"              
       
   updateGender:
-    handler: update.updateGender
+    handler: functions/update.updateGender
     events:
       - http:
           path: user/updategender
@@ -216,7 +246,7 @@ functions:
         Resource: "arn:aws:lambda:${self:provider.region}:${self:custom.accountID}:function:DSG-Task3-M-${sls:stage}-updatePrio"              
 
   updateSysRel:
-    handler: update.updateSysRel
+    handler: functions/update.updateSysRel
     events:
       - http:
           path: user/updatesysrel
@@ -243,7 +273,7 @@ functions:
         Resource: "arn:aws:lambda:${self:provider.region}:${self:custom.accountID}:function:DSG-Task3-M-${sls:stage}-updatePrio"              
 
   updateHealthPr:
-    handler: update.updateHealthPr
+    handler: functions/update.updateHealthPr
     events:
       - http:
           path: user/updatehealthpr
@@ -269,8 +299,11 @@ functions:
           - "lambda:GetFunction"
         Resource: "arn:aws:lambda:${self:provider.region}:${self:custom.accountID}:function:DSG-Task3-M-${sls:stage}-updatePrio"             
 
+  # ---------- Admin endpoints (/admin/*) ----------
+
+  # Migrate legacy records (no Version attribute) to the current data model
   updateOldData:
-    handler: update.updateOldData
+    handler: functions/update.updateOldData
     events:
       - http:
           path: admin/updateolddata
@@ -302,8 +335,9 @@ functions:
         Resource: 
           - "Fn::GetAtt": [ vaccTableM, Arn ]           
 
+  # Internal: delete a registration (no HTTP event)
   deleteItem:
-    handler: delete.deleteItem
+    handler: functions/deleteItem.deleteItem
     iamRoleStatementsName: deleteItemM
     iamRoleStatements:
       - Effect: "Allow"
@@ -311,8 +345,9 @@ functions:
         Resource: 
           - "Fn::GetAtt": [ vaccTableM, Arn ]
 
+  # Oldest people of a priority group in a zip code area
   specialFunction:
-    handler: function.specialFunction
+    handler: functions/specialFunction.specialFunction
     events:
       - http:
           path: admin/specialfunction
@@ -335,8 +370,9 @@ functions:
         Resource: 
           - "Fn::GetAtt": [ vaccTableM, Arn ]
 
+  # Internal event handler: recompute a person's priority group (no HTTP event)
   updatePrio:
-    handler: update.updatePrio
+    handler: functions/update.updatePrio
     iamRoleStatementsName: updatePrioM
     iamRoleStatements:
       - Effect: "Allow"
@@ -347,7 +383,7 @@ functions:
           - "Fn::GetAtt": [ vaccTableM, Arn ]
 
   getUserByZipcode:
-    handler: getUserByZipcode.getUserByZipcode
+    handler: functions/getUserByZipcode.getUserByZipcode
     events:
       - http:
           path: admin/getuserbyzipcode
@@ -371,7 +407,7 @@ functions:
           - "Fn::Join": ['/', ["Fn::GetAtt": [ vaccTableM, Arn ], 'index', 'PLZ-index']]
 
   getUserByPrio:
-    handler: getUserByPrio.getUserByPrio
+    handler: functions/getUserByPrio.getUserByPrio
     events:
       - http:
           path: admin/getuserbyprio
@@ -394,8 +430,9 @@ functions:
         Resource: 
           - "Fn::Join": ['/', ["Fn::GetAtt": [ vaccTableM, Arn ], 'index', 'Prio-index']]          
 
+  # Custom TOKEN authorizer for /user/* (token = "<mail>|<sha256(password)>")
   lambdaAuthorizer:
-    handler: lambdaAuthorizer.lambda_handler
+    handler: functions/lambdaAuthorizer.lambda_handler
     iamRoleStatementsName: lambdaAuthorizerM
     iamRoleStatements:
       - Effect: "Allow"
@@ -403,8 +440,9 @@ functions:
         Resource: 
           - "Fn::GetAtt": [ vaccTableM, Arn ]    
 
+  # Add vaccination slots, assign them directly and notify people via SES
   addFreeDates:
-    handler: addFreeDates.addFreeDates
+    handler: functions/addFreeDates.addFreeDates
     events:
       - http:
           path: admin/addfreedates
@@ -442,8 +480,9 @@ functions:
         Resource: 
           - arn:aws:ses:${self:provider.region}:${self:custom.accountID}:identity/*              
 
+  # Hand out stored free slots to the next n people and notify them via SES
   distributeDates:
-    handler: distributeDates.distributeDates
+    handler: functions/distributeDates.distributeDates
     events:
       - http:
           path: admin/distributedates
@@ -485,6 +524,12 @@ functions:
 plugins:
   - serverless-iam-roles-per-function
 
+# -----------------------------------------------------------------------------
+# Infrastructure (CloudFormation)
+#   CognitoUserPool   : admin accounts and the hosted login UI
+#   vaccTableM        : registrations (PK: ID; GSIs: PLZ-index, Prio-index)
+#   datesTableM       : free vaccination slots per zip code and day (PK: PLZ, SK: Datum)
+# -----------------------------------------------------------------------------
 resources:
   Resources:
     CognitoUserPool:

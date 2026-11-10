@@ -1,0 +1,18 @@
+# Serverless Framework
+.serverless/
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Local environment / secrets
+.env
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.pytest_cache/

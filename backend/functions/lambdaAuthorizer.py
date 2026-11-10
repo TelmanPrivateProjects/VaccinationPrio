@@ -1,3 +1,6 @@
+# Custom authorizer for the citizen-facing API.
+# lambda_handler is project code; the AuthPolicy helper below is taken from the
+# AWS API Gateway authorizer blueprint (Apache License 2.0, notice kept below).
 """
 Copyright 2015-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
@@ -16,6 +19,16 @@ from boto3.dynamodb.conditions import Attr
 
 
 def lambda_handler(event, context):
+    """Custom API Gateway TOKEN authorizer for the /user/* endpoints.
+
+    Trigger : every request to a /user/* endpoint, before the target Lambda runs
+    Token   : the Authorization header "<mail>|<sha256(password)>", which the
+              frontend stores in the "auth" cookie after login / registration
+    Returns : an IAM policy allowing POST /user/* for this person, plus the
+              person's ID in the authorizer context. API Gateway passes this ID
+              to the target Lambda, so users can only access their own record.
+              Any failure results in 401 Unauthorized.
+    """
 
     try:
         dynamodb = boto3.resource('dynamodb')
@@ -25,6 +38,7 @@ def lambda_handler(event, context):
         mail = authorizationToken[0]
         userToken = authorizationToken[1]
 
+        # Look up the person whose mail and password hash match the token
         response = table.scan(FilterExpression=Attr(
             "Mail").eq(mail) & Attr("secret").eq(userToken))
 
